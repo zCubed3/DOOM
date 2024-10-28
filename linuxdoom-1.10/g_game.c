@@ -672,10 +672,10 @@ void G_Ticker (void)
 	    if (cmd->forwardmove > TURBOTHRESHOLD 
 		&& !(gametic&31) && ((gametic>>5)&3) == i )
 	    {
-		static char turbomessage[80];
-		extern char *player_names[4];
-		sprintf (turbomessage, "%s is turbo!",player_names[i]);
-		players[consoleplayer].message = turbomessage;
+		    static char turbomessage[80];
+		    extern char *player_names[4];
+		    sprintf (turbomessage, "%s is turbo!",player_names[i]);
+		    players[consoleplayer].message = turbomessage;
 	    }
 			
 	    if (netgame && !netdemo && !(gametic%ticdup) ) 
@@ -1583,12 +1583,15 @@ void G_DoPlayDemo (void)
 { 
     skill_t skill; 
     int             i, episode, map; 
+    byte    version;
 	 
     gameaction = ga_nothing; 
     demobuffer = demo_p = W_CacheLumpName (defdemoname, PU_STATIC); 
-    if ( *demo_p++ != VERSION)
+    version = *demo_p++;
+    
+    if ( version != VERSION )
     {
-      fprintf( stderr, "Demo is from a different game version!\n");
+      fprintf( stderr, "Demo is from a different game version! (Was %i)\n", version );
       gameaction = ga_nothing;
       return;
     }

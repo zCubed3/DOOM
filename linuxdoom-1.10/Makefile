@@ -4,14 +4,17 @@
 #
 # $Log:$
 #
-CC=  gcc  # gcc or g++
 
-CFLAGS=-g -Wall -DNORMALUNIX -DLINUX # -DUSEASM 
-LDFLAGS=-L/usr/X11R6/lib
-LIBS=-lXext -lX11 -lnsl -lm
+#CC=gcc
+CC=arm-linux-gnueabi-gcc  # gcc or g++
+
+CFLAGS=-g -fsigned-char -Wall -DNORMALUNIX -DLINUX # -DUSEASM 
+LDFLAGS=
+LIBS=-lnsl -lm
 
 # subdirectory for objects
-O=linux
+O=linux/obj
+OUT=linux
 
 # not too sophisticated dependency
 OBJS=				\
@@ -77,17 +80,18 @@ OBJS=				\
 		$(O)/info.o				\
 		$(O)/sounds.o
 
-all:	 $(O)/linuxxdoom
+all:	 $(OUT)/linuxxdoom
 
 clean:
 	rm -f *.o *~ *.flc
-	rm -f linux/*
+	rm -rf linux/*
 
-$(O)/linuxxdoom:	$(OBJS) $(O)/i_main.o
+$(OUT)/linuxxdoom:	$(OBJS) $(O)/i_main.o
 	$(CC) $(CFLAGS) $(LDFLAGS) $(OBJS) $(O)/i_main.o \
-	-o $(O)/linuxxdoom $(LIBS)
+	-o $(OUT)/linuxdoom $(LIBS)
 
 $(O)/%.o:	%.c
+	mkdir -p $(O)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 #############################################################

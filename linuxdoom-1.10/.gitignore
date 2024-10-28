@@ -1,0 +1,4 @@
+*.o
+linux/
+.vscode/
+.idea/
