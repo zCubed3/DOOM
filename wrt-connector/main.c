@@ -50,6 +50,7 @@ static int g_KeepRunning = 1;
 const int SCREEN_WIDTH = 320;
 const int SCREEN_HEIGHT = 200;
 
+// TODO: Actually use the sequencer
 // Used to order packets in their arrival time
 const unsigned short g_Sequence = 0;
 
@@ -57,31 +58,26 @@ const unsigned short g_Sequence = 0;
 
 typedef struct packet_header_t
 {
-
     uint8_t type;
     uint16_t sequence;
-
 } packet_header_t;
 
 typedef struct s2c_frame_packet_t
 {
-
     packet_header_t header;
     uint16_t width;
     uint16_t height;
-
 } s2c_frame_packet_t;
 
 typedef struct c2s_key_event_packet_t
 {
-
     packet_header_t header;
     byte is_down;
     byte key_code;
-
 } c2s_key_event_packet_t;
 
-typedef enum S2C_PACKET_TYPE {
+typedef enum S2C_PACKET_TYPE
+{
 
     /// Tells client we ack them and accept them
     S2C_HELLO_CLIENT    = 0x00,
@@ -100,7 +96,8 @@ typedef enum S2C_PACKET_TYPE {
 
 } S2C_PACKET_TYPE;
 
-typedef enum C2S_PACKET_TYPE {
+typedef enum C2S_PACKET_TYPE
+{
 
     /// Tells the server we're still alive
     C2S_HEARTBEAT       = 0x01,
@@ -115,14 +112,16 @@ typedef enum C2S_PACKET_TYPE {
 
 #pragma pack(pop)
 
-void SendClientACK() {
+void SendClientACK()
+{
     packet_header_t pkt_header;
     pkt_header.type = C2S_HELLO_SERVER;
 
     int result = sendto(g_Socket, &pkt_header, sizeof(pkt_header), 0, (struct sockaddr*)&g_ClientAddr, sizeof(g_ClientAddr));
 }
 
-int ConnectToDOOM() {
+int ConnectToDOOM()
+{
     struct addrinfo hints;
     struct addrinfo *result;
 
@@ -134,7 +133,8 @@ int ConnectToDOOM() {
 
     int iResult = getaddrinfo(DOOM_IP, DOOM_PORT_STR, &hints, &result);
 
-    if (iResult != 0) {
+    if (iResult != 0)
+    {
         printf("getaddrinfo failed: %d\n", iResult);
         WSACleanup();
         return 1;
@@ -142,7 +142,8 @@ int ConnectToDOOM() {
 
     g_Socket = socket(result->ai_family, result->ai_socktype, result->ai_protocol);
 
-    if (g_Socket == INVALID_SOCKET) {
+    if (g_Socket == INVALID_SOCKET)
+    {
         printf("socket() failed: %d\n", WSAGetLastError());
         WSACleanup();
         return 2;
@@ -156,14 +157,16 @@ int ConnectToDOOM() {
 
     iResult = bind(g_Socket, (struct sockaddr*)&g_ServerAddr, sizeof(g_ServerAddr));
 
-    if (iResult == SOCKET_ERROR) {
+    if (iResult == SOCKET_ERROR)
+    {
         printf("bind() failed: %d\n", WSAGetLastError());
         closesocket(g_Socket);
         g_Socket = INVALID_SOCKET;
         return 4;
     }
 
-    if (g_Socket == INVALID_SOCKET) {
+    if (g_Socket == INVALID_SOCKET)
+    {
         printf("socket connection failed: %d\n", WSAGetLastError());
         WSACleanup();
         return 5;
@@ -208,14 +211,10 @@ void HandleMessages()
     int iresult = recvfrom(g_Socket, bytes, 65536, 0, (struct sockaddr*)&client_addr, &client_addr_len);
 
     if (iresult == 0)
-    {
         return;
-    }
 
     if (iresult < 0)
-    {
         return;
-    }
 
     if (pkt_header->type == S2C_SET_PALETTE)
     {
@@ -308,7 +307,8 @@ int ConvertKeycode( SDL_Keycode sdl_code )
     return -1;
 }
 
-void PollEvents() {
+void PollEvents()
+{
     SDL_Event sdl_event;
 
     memset(&sdl_event, 0, sizeof(sdl_event));
@@ -356,7 +356,8 @@ void PollEvents() {
 
 }
 
-int main(void) {
+int main(void)
+{
     SDL_Init(SDL_INIT_VIDEO);
 
     printf("Connecting to Doom...\n");
@@ -396,7 +397,6 @@ int main(void) {
 
     while (g_KeepRunning)
     {
-
         PollEvents();
 
         HandleMessages();
@@ -404,7 +404,6 @@ int main(void) {
         SDL_RenderClear(g_SDLRenderer);
         SDL_RenderTexture(g_SDLRenderer, g_SDLTexture, NULL, NULL);
         SDL_RenderPresent(g_SDLRenderer);
-
     }
 
     return 0;
