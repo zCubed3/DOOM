@@ -1,0 +1,16 @@
+# macOS
+.DS_Store
+
+# Prevent cmake and builds
+cmake*/
+build*/
+bin*/
+.cache*/
+
+# Script generated files
+*.gen.h
+
+# IDEs
+*.vim
+.idea/
+.vs
