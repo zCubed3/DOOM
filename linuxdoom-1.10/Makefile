@@ -8,7 +8,7 @@
 #CC=gcc
 CC=arm-linux-gnueabi-gcc  # gcc or g++
 
-CFLAGS=-g -fsigned-char -Wall -DNORMALUNIX -DLINUX # -DUSEASM 
+CFLAGS=-g -O3 -fsigned-char -Wall -DNORMALUNIX -DLINUX # -DUSEASM 
 LDFLAGS=
 LIBS=-lnsl -lm
 

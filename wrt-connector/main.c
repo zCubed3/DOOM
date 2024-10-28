@@ -47,6 +47,8 @@ static SDL_Texture* g_SDLTexture;
 
 static int g_KeepRunning = 1;
 
+static int g_MouseHistory;
+
 const int SCREEN_WIDTH = 320;
 const int SCREEN_HEIGHT = 200;
 
@@ -76,6 +78,20 @@ typedef struct c2s_key_event_packet_t
     byte key_code;
 } c2s_key_event_packet_t;
 
+typedef struct c2s_mouse_motion_event_packet_t
+{
+    packet_header_t header;
+    int16_t x_motion;
+    int16_t y_motion;
+    byte packed_code;
+} c2s_mouse_motion_event_packet_t;
+
+typedef struct c2s_mouse_button_event_packet_t
+{
+    packet_header_t header;
+    byte packed_code;
+} c2s_mouse_button_event_packet_t;
+
 typedef enum S2C_PACKET_TYPE
 {
 
@@ -84,6 +100,9 @@ typedef enum S2C_PACKET_TYPE
 
     /// Tells the client we're still alive
     S2C_HEARTBEAT       = 0x01,
+
+    /// Tells the client the game is shutting down
+    S2C_SHUTDOWN        = 0x02,
 
     /// One rendered frame of the game
     S2C_SCREEN_FRAME    = 0x10,
@@ -99,14 +118,20 @@ typedef enum S2C_PACKET_TYPE
 typedef enum C2S_PACKET_TYPE
 {
 
+    /// Tells server we've connected
+    C2S_HELLO_SERVER    = 0x00,
+
     /// Tells the server we're still alive
     C2S_HEARTBEAT       = 0x01,
 
-    /// Tells server we've connected
-    C2S_HELLO_SERVER    = 0x10,
-
     /// Tells the server about our keypress
     C2S_KEY_PRESS_EVENT = 0x11,
+
+    /// Mouse was moved
+    C2S_MOUSE_MOTION_EVENT = 0x12,
+
+    /// Mouse button was pressed
+    C2S_MOUSE_BUTTON_EVENT = 0x13,
 
 } C2S_PACKET_TYPE;
 
@@ -261,6 +286,12 @@ void HandleMessages()
 
         SDL_UnlockTexture(g_SDLTexture);
     }
+
+    if (pkt_header->type == S2C_SHUTDOWN)
+    {
+        printf("Goodbye!\n");
+        g_KeepRunning = 0;
+    }
 }
 
 int ConvertScancode( SDL_Scancode sdl_code )
@@ -301,6 +332,48 @@ int ConvertKeycode( SDL_Keycode sdl_code )
 
         case SDLK_SPACE:
             return ' ';
+
+        case SDLK_F1:
+            return KEY_F1;
+
+        case SDLK_F2:
+            return KEY_F2;
+
+        case SDLK_F3:
+            return KEY_F3;
+
+        case SDLK_F4:
+            return KEY_F4;
+
+        case SDLK_F5:
+            return KEY_F5;
+
+        case SDLK_F6:
+            return KEY_F6;
+
+        case SDLK_F7:
+            return KEY_F7;
+
+        case SDLK_F8:
+            return KEY_F8;
+
+        case SDLK_F9:
+            return KEY_F9;
+
+        case SDLK_F10:
+            return KEY_F10;
+
+        case SDLK_F11:
+            return KEY_F11;
+
+        case SDLK_F12:
+            return KEY_F12;
+
+        case SDLK_ESCAPE:
+            return KEY_ESCAPE;
+
+        case SDLK_TAB:
+            return KEY_TAB;
 
     }
 
@@ -352,6 +425,32 @@ void PollEvents()
             sendto(g_Socket, &pkt_key_event, sizeof(pkt_key_event), 0, (struct sockaddr*)&g_ClientAddr, sizeof(g_ClientAddr));
         }
 
+        if (sdl_event.type == SDL_EVENT_MOUSE_MOTION) {
+            c2s_mouse_motion_event_packet_t pkt_mouse_event;
+            pkt_mouse_event.header.type = C2S_MOUSE_MOTION_EVENT;
+
+            pkt_mouse_event.x_motion = sdl_event.motion.xrel;
+            pkt_mouse_event.y_motion = -sdl_event.motion.yrel;
+            pkt_mouse_event.packed_code = g_MouseHistory;
+
+            sendto(g_Socket, &pkt_mouse_event, sizeof(pkt_mouse_event), 0, (struct sockaddr*)&g_ClientAddr, sizeof(g_ClientAddr));
+        }
+
+        if (sdl_event.type == SDL_EVENT_MOUSE_BUTTON_DOWN
+        || sdl_event.type == SDL_EVENT_MOUSE_BUTTON_UP) {
+            c2s_mouse_button_event_packet_t pkt_mouse_event;
+            pkt_mouse_event.header.type = C2S_MOUSE_BUTTON_EVENT;
+
+            if (sdl_event.button.down)
+                g_MouseHistory |= (1 << (sdl_event.button.button - 1));
+            else
+                g_MouseHistory &= ~(1 << (sdl_event.button.button - 1));
+
+            //pkt_mouse_event.packed_code |= (sdl_event.button.down << 7);
+            pkt_mouse_event.packed_code = g_MouseHistory;
+
+            sendto(g_Socket, &pkt_mouse_event, sizeof(pkt_mouse_event), 0, (struct sockaddr*)&g_ClientAddr, sizeof(g_ClientAddr));
+        }
     }
 
 }
@@ -392,6 +491,8 @@ int main(void)
             SCREEN_HEIGHT);
 
     SDL_SetTextureScaleMode(g_SDLTexture, SDL_SCALEMODE_NEAREST);
+
+    SDL_SetWindowRelativeMouseMode(g_SDLWindow, 1);
 
     g_Palette = malloc(256 * 3);
 

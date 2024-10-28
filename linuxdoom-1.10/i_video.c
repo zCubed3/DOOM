@@ -75,37 +75,49 @@ static int client_need_palette;
 
 typedef struct packet_header_t 
 {
-
     uint8_t type;
     uint16_t sequence;
-
 } packet_header_t;
 
-typedef struct s2c_frame_packet_t 
+typedef struct s2c_frame_packet_t
 {
-
     packet_header_t header;
     uint16_t width;
-	uint16_t height;
-
+    uint16_t height;
 } s2c_frame_packet_t;
 
-typedef struct c2s_key_event_packet_t 
+typedef struct c2s_key_event_packet_t
 {
-
     packet_header_t header;
     byte is_down;
     byte key_code;
-
 } c2s_key_event_packet_t;
 
-typedef enum S2C_PACKET_TYPE {
+typedef struct c2s_mouse_motion_event_packet_t
+{
+    packet_header_t header;
+    int16_t x_motion;
+    int16_t y_motion;
+	byte packed_code;
+} c2s_mouse_motion_event_packet_t;
+
+typedef struct c2s_mouse_button_event_packet_t
+{
+    packet_header_t header;
+    byte packed_code;
+} c2s_mouse_button_event_packet_t;
+
+typedef enum S2C_PACKET_TYPE 
+{
 
     /// Tells client we ack them and accept them
     S2C_HELLO_CLIENT    = 0x00,
 
     /// Tells the client we're still alive
     S2C_HEARTBEAT       = 0x01,
+
+	/// Tells the client the game is shutting down
+    S2C_SHUTDOWN        = 0x02,
 
     /// One rendered frame of the game
     S2C_SCREEN_FRAME    = 0x10,
@@ -118,16 +130,23 @@ typedef enum S2C_PACKET_TYPE {
 
 } S2C_PACKET_TYPE;
 
-typedef enum C2S_PACKET_TYPE {
+typedef enum C2S_PACKET_TYPE 
+{
+
+    /// Tells server we've connected
+    C2S_HELLO_SERVER    = 0x00,
 
     /// Tells the server we're still alive
     C2S_HEARTBEAT       = 0x01,
 
-    /// Tells server we've connected
-    C2S_HELLO_SERVER    = 0x10,
-
     /// Tells the server about our keypress
     C2S_KEY_PRESS_EVENT = 0x11,
+	
+    /// Mouse was moved
+    C2S_MOUSE_MOTION_EVENT = 0x12,
+
+    /// Mouse button was pressed
+    C2S_MOUSE_BUTTON_EVENT = 0x13,
 
 } C2S_PACKET_TYPE;
 
@@ -239,6 +258,15 @@ void I_SetupTCPServer (void)
 void I_ShutdownTCPServer (void)
 {
 
+	if (have_active_client) 
+	{
+		packet_header_t pkt_header;
+
+		pkt_header.type = S2C_SHUTDOWN;
+
+		sendto(sockfd, &pkt_header, sizeof(pkt_header), 0, (struct sockaddr*)&active_client_addr, sizeof(active_client_addr));
+	}
+
 	close(sockfd);
 
 }
@@ -346,6 +374,36 @@ int I_ScanNetwork (void)
 
 		doom_event.type = pkt_key_event.is_down ? ev_keydown : ev_keyup;
 		doom_event.data1 = pkt_key_event.key_code;
+
+		D_PostEvent(&doom_event);
+	}
+
+	if (pkt_header.type == C2S_MOUSE_MOTION_EVENT)
+	{
+		c2s_mouse_motion_event_packet_t pkt_mouse_event;
+		event_t doom_event;
+
+		recvfrom(sockfd, &pkt_mouse_event, sizeof(pkt_mouse_event), 0, NULL, NULL);
+
+		doom_event.type = ev_mouse;
+		doom_event.data1 = pkt_mouse_event.packed_code;
+		doom_event.data2 = pkt_mouse_event.x_motion;
+		doom_event.data3 = pkt_mouse_event.y_motion;
+
+		D_PostEvent(&doom_event);
+	}
+
+	if (pkt_header.type == C2S_MOUSE_BUTTON_EVENT)
+	{
+		c2s_mouse_button_event_packet_t pkt_mouse_event;
+		event_t doom_event;
+
+		recvfrom(sockfd, &pkt_mouse_event, sizeof(pkt_mouse_event), 0, NULL, NULL);
+
+		doom_event.type = ev_mouse;
+		doom_event.data1 = pkt_mouse_event.packed_code;
+		doom_event.data2 = 0;
+		doom_event.data3 = 0;
 
 		D_PostEvent(&doom_event);
 	}
